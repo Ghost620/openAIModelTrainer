@@ -66,8 +66,6 @@ router.post("/", async (req, response, next) => {
 
         }
 
-        //console.log(alldataCsv.slice(0, data['results']), alldataCsv.length)
-
         stringify(alldataCsv.slice(0, data['results']), {
           header: true,
           columns: { Prompt: "Prompt", Completion: "Completion" }
@@ -100,7 +98,7 @@ router.post("/", async (req, response, next) => {
             .then(() => {
               fs.unlink(filename, (err) => {
                 if (err) { throw err }
-                response.status(200).send(res)
+                response.status(200).send(alldataCsv)
               })
             })
             .catch(function(error) {
@@ -108,15 +106,9 @@ router.post("/", async (req, response, next) => {
             });
 
         });
-
-
       }
-
     }
-
   }
-
-
 })
 
 module.exports = router
