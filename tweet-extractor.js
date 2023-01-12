@@ -33,19 +33,42 @@ router.post("/", async (req, response, next) => {
 
     if (cond === true) {
 
-      await readOnlyClient.v2.userTimeline(
-        data["twitter_id"], {
-        exclude: ["replies", "retweets"],
-        "tweet.fields": ["in_reply_to_user_id", "referenced_tweets"],
-        max_results: data["max_results"] ? data["max_results"] : 10,
-      }
-      ).then(async (res) => {
+      if (data['results']) {
+        let alldataCsv = [];
+        let token = ''
+      
+        while (true) {
+          var params = {
+            exclude: ["replies", "retweets"],
+            "tweet.fields": ["in_reply_to_user_id", "referenced_tweets"],
+            max_results: 100,
+          }
+          token ? (params.pagination_token = token) : console.log()
+          if (alldataCsv.length >= data['results']){ break }
 
-        const dataCsv = res._realData.data.map((tweet) => (
-          tweet.referenced_tweets ? null : { Prompt: `Write an engaging tweet by Twitter user @${data["username"]}`, Completion: tweet.text }
-        ))
+          await readOnlyClient.v2.userTimeline(
+            data["twitter_id"], params
+          ).then(async (res) => {
+  
+            token = res._realData.meta.next_token
+            const dataCsv = res._realData.data.map( (tweet) => (
+              tweet.referenced_tweets ? null : { Prompt: `Write an engaging tweet by Twitter user @${data["username"]}`, Completion: tweet.text }
+            ))
 
-        stringify(dataCsv.filter(Boolean), {
+            Promise.all([dataCsv]).then((values) => {
+              alldataCsv = alldataCsv.concat(values[0].filter(Boolean))
+            });
+
+          }).catch((err) => {
+            if (err instanceof TypeError) { response.status(406).send({ message: "Failed to create Tweets file" }) }
+            response.status(err.code).send(err.data)
+          })
+
+        }
+
+        //console.log(alldataCsv.slice(0, data['results']), alldataCsv.length)
+
+        stringify(alldataCsv.slice(0, data['results']), {
           header: true,
           columns: { Prompt: "Prompt", Completion: "Completion" }
         }, async (err, output) => {
@@ -86,10 +109,8 @@ router.post("/", async (req, response, next) => {
 
         });
 
-      }).catch((err) => {
-        if (err instanceof TypeError) { response.status(406).send({ message: "Failed to create Tweets file" }) }
-        response.status(err.code).send(err.data)
-      })
+
+      }
 
     }
 
