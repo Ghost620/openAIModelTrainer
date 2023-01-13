@@ -35,7 +35,7 @@ app.post('/create-open-ai-model', async (req, res) => {
         .then((response) => {
 
           const csv_character_length = response.data.length
-          const num_records = response.data.split('\n').length
+          const num_records = response.data.split('\n').filter(Boolean).length
           const fileSize = csv_character_length / 1000
           const n_epochs = data['n_epochs'] ? data['n_epochs'] : 2
           var count = (csv_character_length / 4) * n_epochs
@@ -64,9 +64,9 @@ app.post('/create-open-ai-model', async (req, res) => {
             count = count * n
             count = count.toFixed(2)
             if (count < 0.01) {
-              res.status(200).send({ "estimate": `<$0.01`, "num_records": num_records, "num_chars": csv_character_length, "file_size": fileSize })
+              res.status(200).send({ "estimate": `<$0.01`, "num_records": num_records-1, "num_chars": csv_character_length, "file_size": fileSize })
             } else {
-              res.status(200).send({ "estimate": `~$${count}`, "num_records": num_records, "num_chars": csv_character_length, "file_size": fileSize })
+              res.status(200).send({ "estimate": `~$${count}`, "num_records": num_records-1, "num_chars": csv_character_length, "file_size": fileSize })
             }
           }
         })
@@ -87,7 +87,7 @@ app.post('/create-open-ai-model', async (req, res) => {
           var arr = []
           var charLength = 0
 
-          await axios.get(data['csvUrl'], { responseType: "stream", })
+          await axios.get(data['csvUrl'], { responseType: "stream" })
             .then(async (response) => {
 
               await response.data
