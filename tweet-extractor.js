@@ -29,84 +29,83 @@ router.post("/", async (req, response, next) => {
   } else {
 
     var cond = false
-    cond = (dataKeys.includes("user_id") && data['user_id'] != '') ? (dataKeys.includes("username") && data['username'] != '') ? (dataKeys.includes("twitter_id") && data['twitter_id'] != '') ? (dataKeys.includes("env") && data['env'] != '') ? (data['env'] == 'dev' || data['env'] == 'prd') ? true : response.status(500).send({ 'error': "env should be either dev or prd" }) : response.status(500).send({ 'error': "env not provided" }) : response.status(500).send({ 'error': "Twitter ID not provided" }) : response.status(500).send({ 'error': "Username not provided" }) : response.status(500).send({ 'error': "User ID not provided" })
+    cond = (dataKeys.includes("user_id") && data['user_id'] != '') ? (dataKeys.includes("username") && data['username'] != '') ? (dataKeys.includes("twitter_id") && data['twitter_id'] != '') ? (dataKeys.includes("env") && data['env'] != '') ? (data['env'] == 'dev' || data['env'] == 'prd') ? (dataKeys.includes("results")) ? true : response.status(500).send({ 'error': "Results not provided" }) : response.status(500).send({ 'error': "env should be either dev or prd" }) : response.status(500).send({ 'error': "env not provided" }) : response.status(500).send({ 'error': "Twitter ID not provided" }) : response.status(500).send({ 'error': "Username not provided" }) : response.status(500).send({ 'error': "User ID not provided" })
 
     if (cond === true) {
 
-      if (data['results']) {
-        let alldataCsv = [];
-        let token = ''
-      
-        while (true) {
-          var params = {
-            exclude: ["replies", "retweets"],
-            "tweet.fields": ["in_reply_to_user_id", "referenced_tweets"],
-            max_results: 100,
-          }
-          token ? (params.pagination_token = token) : console.log()
-          if (alldataCsv.length >= data['results']){ break }
-
-          await readOnlyClient.v2.userTimeline(
-            data["twitter_id"], params
-          ).then(async (res) => {
-  
-            token = res._realData.meta.next_token
-            const dataCsv = res._realData.data.map( (tweet) => (
-              tweet.referenced_tweets ? null : { Prompt: `Write an engaging tweet by Twitter user @${data["username"]}`, Completion: tweet.text }
-            ))
-
-            Promise.all([dataCsv]).then((values) => {
-              alldataCsv = alldataCsv.concat(values[0].filter(Boolean))
-            });
-
-          }).catch((err) => {
-            if (err instanceof TypeError) { response.status(406).send({ message: "Failed to create Tweets file" }) }
-            response.status(err.code).send(err.data)
-          })
-
+      let alldataCsv = [];
+      let token = ''
+    
+      while (true) {
+        var params = {
+          exclude: ["replies", "retweets"],
+          "tweet.fields": ["in_reply_to_user_id", "referenced_tweets"],
+          max_results: 100,
         }
+        token ? (params.pagination_token = token) : console.log()
+        if (alldataCsv.length >= parseInt(data['results']) ){ break }
 
-        stringify(alldataCsv.slice(0, data['results']), {
-          header: true,
-          columns: { Prompt: "Prompt", Completion: "Completion" }
-        }, async (err, output) => {
-          const filename = `tweets-${data['username']}-${uuidv4().slice(0, 5)}.csv`
-          fs.writeFileSync(filename, output);
-          var filedata = fs.readFileSync(filename);
+        await readOnlyClient.v2.userTimeline(
+          data["twitter_id"], params
+        ).then(async (res) => {
 
-          var dataDb = JSON.stringify({
-            "upload": {
-              "filename": filename,
-              "contents": filedata.toString('base64'),
-              "private": false
-            }
+          token = res._realData.meta.next_token
+          const dataCsv = res._realData.data.map( (tweet) => (
+            tweet.referenced_tweets ? null : { Prompt: `Write an engaging tweet by Twitter user @${data["username"]}`, Completion: tweet.text }
+          ))
+
+          Promise.all([dataCsv]).then((values) => {
+            alldataCsv = alldataCsv.concat(values[0].filter(Boolean))
           });
 
-          const URL = (data['env'] == "dev") ? `https://no-code-ai-model-builder.com/version-test/api/1.1/obj/user/${data['user_id']}` : `https://no-code-ai-model-builder.com/api/1.1/obj/user/${data['user_id']}`
+        }).catch((err) => {
+          if (err instanceof TypeError) { response.status(406).send({ message: "Failed to create Tweets file" }) }
+          response.status(err.code).send(err.data)
+        })
 
-          var config = {
-            method: 'patch',
-            url: URL,
-            headers: {
-              'Authorization': 'Bearer a93b979a285cc2cc945e767a8d078dad',
-              'Content-Type': 'application/json'
-            },
-            data: dataDb
-          };
-
-          axios(config)
-            .then(() => {
-              fs.unlink(filename, (err) => {
-                if (err) { throw err }
-                response.status(200).send(alldataCsv)
-              })
-            })
-            .catch(function(error) {
-              response.status(406).send({ error: error.cause, message: "Failed to upload Tweets file " })
-            });
-
-        });
       }
+
+      stringify(alldataCsv.slice(0, data['results']), {
+        header: true,
+        columns: { Prompt: "Prompt", Completion: "Completion" }
+      }, async (err, output) => {
+        const filename = `tweets-${data['username']}-${uuidv4().slice(0, 5)}.csv`
+        fs.writeFileSync(filename, output);
+        var filedata = fs.readFileSync(filename);
+
+        var dataDb = JSON.stringify({
+          "upload": {
+            "filename": filename,
+            "contents": filedata.toString('base64'),
+            "private": false
+          }
+        });
+
+        const URL = (data['env'] == "dev") ? `https://no-code-ai-model-builder.com/version-test/api/1.1/obj/user/${data['user_id']}` : `https://no-code-ai-model-builder.com/api/1.1/obj/user/${data['user_id']}`
+
+        var config = {
+          method: 'patch',
+          url: URL,
+          headers: {
+            'Authorization': 'Bearer a93b979a285cc2cc945e767a8d078dad',
+            'Content-Type': 'application/json'
+          },
+          data: dataDb
+        };
+
+        axios(config)
+          .then(() => {
+            fs.unlink(filename, (err) => {
+              if (err) { throw err }
+              response.status(200).send(alldataCsv)
+            })
+          })
+          .catch(function(error) {
+            response.status(406).send({ error: error.cause, message: "Failed to upload Tweets file " })
+          });
+
+      });
+      
     }
   }
 })
