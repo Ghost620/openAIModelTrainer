@@ -131,7 +131,7 @@ app.post('/create-open-ai-model', async (req, res) => {
                       n_epochs: data['n_epochs'] ? data['n_epochs'] : 2,
                       suffix: data['model_name'] ? 'trial-' + data['model_name'] : 'trial-my-model'
                     }).then(response2 => {
-                      res.status(200).send({ "message": "Success", "id": response2.data.id, "num_records": arr.length + 1, "num_chars": charLength, "file_size": fileSize })
+                      res.status(200).send({ "message": "Success", "id": response2.data.id, "num_records": arr.length, "num_chars": charLength, "file_size": fileSize })
                     }).catch(err => { res.status(401).send({ 'error': err.message, 'message': 'Creation failed' }) });
 
                   }).catch(err => { res.status(401).send({ 'error': err.message, message: "Invalid API key" }) });
