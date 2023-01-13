@@ -35,21 +35,21 @@ router.post("/", async (req, response, next) => {
 
       let alldataCsv = [];
       let token = ''
+      let end = false
+      var params = {
+        exclude: ["replies", "retweets"],
+        "tweet.fields": ["in_reply_to_user_id", "referenced_tweets"],
+        max_results: 100,
+      }
     
       while (true) {
-        var params = {
-          exclude: ["replies", "retweets"],
-          "tweet.fields": ["in_reply_to_user_id", "referenced_tweets"],
-          max_results: 100,
-        }
-        token ? (params.pagination_token = token) : console.log()
-        if (alldataCsv.length >= parseInt(data['results']) ){ break }
+        if ( alldataCsv.length >= parseInt(data['results']) || end === true ){ break }
+        token ? (params.pagination_token = token) : token = ''
 
-        await readOnlyClient.v2.userTimeline(
-          data["twitter_id"], params
-        ).then(async (res) => {
+        await readOnlyClient.v2.userTimeline( data["twitter_id"], params )
+        .then(async (res) => {
+          res._realData.meta.next_token ? token = res._realData.meta.next_token : end = true
 
-          token = res._realData.meta.next_token
           const dataCsv = res._realData.data.map( (tweet) => (
             tweet.referenced_tweets ? null : { Prompt: `Write an engaging tweet by Twitter user @${data["username"]}`, Completion: tweet.text }
           ))
@@ -57,12 +57,10 @@ router.post("/", async (req, response, next) => {
           Promise.all([dataCsv]).then((values) => {
             alldataCsv = alldataCsv.concat(values[0].filter(Boolean))
           });
-
-        }).catch((err) => {
-          if (err instanceof TypeError) { response.status(406).send({ message: "Failed to create Tweets file" }) }
-          response.status(err.code).send(err.data)
         })
-
+        .catch(function(error) {
+          response.status(406).send({ error: error.cause, message: "Failed to create Tweets file " })
+        });
       }
 
       stringify(alldataCsv.slice(0, data['results']), {
