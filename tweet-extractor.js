@@ -51,7 +51,7 @@ router.post("/", async (req, response, next) => {
           res._realData.meta.next_token ? token = res._realData.meta.next_token : end = true
 
           const dataCsv = res._realData.data.map( (tweet) => (
-            tweet.referenced_tweets ? null : { Prompt: `Write an engaging tweet by Twitter user @${data["username"]}`, Completion: tweet.text }
+            tweet.referenced_tweets ? null : { Prompt: `Write an engaging tweet by Twitter user @${data["username"]}`, Completion: tweet.text.replaceAll(/(?:https?|ftp):\/\/[\n\S]+/g, '').replaceAll(/(\s|)@[a-zA-Z0-9]+/g,'').trim() }
           ))
 
           Promise.all([dataCsv]).then((values) => {
