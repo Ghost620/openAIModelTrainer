@@ -50,16 +50,21 @@ router.post("/", async (req, response, next) => {
         .then(async (res) => {
           res._realData.meta.next_token ? token = res._realData.meta.next_token : end = true
 
-          const dataCsv = res._realData.data.map( (tweet) => (
-            tweet.referenced_tweets ? null : { Prompt: `Write an engaging tweet by Twitter user @${data["username"]}`, Completion: tweet.text.replaceAll(/(?:https?|ftp):\/\/[\n\S]+/g, '').replaceAll(/(\s|)@[a-zA-Z0-9]+/g,'').trim() }
-          ))
+          if (!res._realData.data){
+            end = true
+          } else {
+            const dataCsv = res._realData.data.map( (tweet) => (
+              tweet.referenced_tweets ? null : { Prompt: `Write me a tweet, under 280 characters, make it interesting and useful`, Completion: tweet.text.replaceAll(/(?:https?|ftp):\/\/[\n\S]+/g, '').replaceAll(/(\s|)@[a-zA-Z0-9]+/g, '').trim() }
+            ))
 
-          Promise.all([dataCsv]).then((values) => {
-            alldataCsv = alldataCsv.concat(values[0].filter(Boolean))
-          });
+            Promise.all([dataCsv]).then((values) => {
+              alldataCsv = alldataCsv.concat(values[0].filter(Boolean))
+            });
+
+          }
         })
         .catch(function(error) {
-          response.status(406).send({ error: error.cause, message: "Failed to create Tweets file " })
+          response.status(406).send({ error: error.cause, message: "Failed to create Tweets file" })
         });
       }
 
