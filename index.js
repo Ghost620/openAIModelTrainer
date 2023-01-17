@@ -31,44 +31,57 @@ app.post('/create-open-ai-model', async (req, res) => {
 
     if (cond == true) {
 
-      await axios.get(data['csvUrl'])
-        .then((response) => {
+      await axios.get(data['csvUrl'], { responseType: "stream" })
+      .then(async (response) => {
 
-          const csv_character_length = response.data.length
-          const num_records = response.data.split('\n').filter(Boolean).length
-          const fileSize = csv_character_length / 1000
-          const n_epochs = data['n_epochs'] ? data['n_epochs'] : 2
-          var count = (csv_character_length / 4) * n_epochs
+        var arr = []
+        var charLength = 0
 
-          var condi = true
-          switch (data['model']) {
-            case 'davinci':
-              var n = 0.00003
-              break;
-            case 'curie':
-              var n = 0.000003
-              break;
-            case 'babbage':
-              var n = 0.0000006
-              break;
-            case 'ada':
-              var n = 0.0000004
-              break;
-            default:
-              condi = false
-              res.status(500).send({ 'error': "Model is incorrect" })
-              break;
-          }
+        await response.data
+          .pipe(csv())
+          .on("data", function(row) {
+            arr.push(row);
+            charLength += JSON.stringify(Object.values(row)).replaceAll('[', '').replaceAll(']', '').length
+          }).on("end", async function() {
 
-          if (condi == true) {
-            count = count * n
-            count = count.toFixed(2)
-            if (count < 0.01) {
-              res.status(200).send({ "estimate": `<$0.01`, "num_records": num_records-1, "num_chars": csv_character_length, "file_size": fileSize })
-            } else {
-              res.status(200).send({ "estimate": `~$${count}`, "num_records": num_records-1, "num_chars": csv_character_length, "file_size": fileSize })
+            var fileSize = await axios.get(data['csvUrl'])
+                .then((response) => {
+                  return response.data.length / 1000
+                })
+            var condi = true
+            const n_epochs = data['n_epochs'] ? data['n_epochs'] : 2
+            var count = (charLength / 4) * n_epochs
+
+            switch (data['model']) {
+              case 'davinci':
+                var n = 0.00003
+                break;
+              case 'curie':
+                var n = 0.000003
+                break;
+              case 'babbage':
+                var n = 0.0000006
+                break;
+              case 'ada':
+                var n = 0.0000004
+                break;
+              default:
+                condi = false
+                res.status(500).send({ 'error': "Model is incorrect" })
+                break;
             }
-          }
+  
+            if (condi == true) {
+              count = count * n
+              count = count.toFixed(2)
+              if (count < 0.01) {
+                res.status(200).send({ "estimate": `<$0.01`, "num_records": arr.length, "num_chars": charLength, "file_size": fileSize })
+              } else {
+                res.status(200).send({ "estimate": `~$${count}`, "num_records": arr.length, "num_chars": charLength, "file_size": fileSize })
+              }
+            }
+
+          })
         })
     }
 

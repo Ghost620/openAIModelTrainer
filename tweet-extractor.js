@@ -99,7 +99,9 @@ router.post("/", async (req, response, next) => {
             })
           })
           .catch(function(error) {
-            response.status(406).send({ error: error.cause, message: "Failed to upload Tweets file " })
+            fs.unlink(filename, (err) => {
+              response.status(406).send({ error: error.cause, message: "Failed to upload Tweets file " })
+            })
           });
 
       });
