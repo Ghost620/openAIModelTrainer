@@ -117,7 +117,7 @@ app.post('/create-open-ai-model', async (req, res) => {
                   const arr2 = arr.map((item) => (
                     {
                       prompt: item[colOne] + "\n\n###\n\n",
-                      completion: ' ' + item[colTwo] + " END"
+                      completion: item[colTwo] + " END"
                     }
                   ))
 
@@ -189,7 +189,7 @@ app.post('/create-open-ai-model', async (req, res) => {
                   const arr2 = arr.map((item) => (
                     {
                       prompt: item[colOne] + "\n\n###\n\n",
-                      completion: ' ' + item[colTwo] + " END"
+                      completion: item[colTwo] + " END"
                     }
                   ))
 
