@@ -32,56 +32,56 @@ app.post('/create-open-ai-model', async (req, res) => {
     if (cond == true) {
 
       await axios.get(data['csvUrl'], { responseType: "stream" })
-      .then(async (response) => {
+        .then(async (response) => {
 
-        var arr = []
-        var charLength = 0
+          var arr = []
+          var charLength = 0
 
-        await response.data
-          .pipe(csv())
-          .on("data", function(row) {
-            arr.push(row);
-            charLength += JSON.stringify(Object.values(row)).replaceAll('[', '').replaceAll(']', '').length
-          }).on("end", async function() {
+          await response.data
+            .pipe(csv())
+            .on("data", function(row) {
+              arr.push(row);
+              charLength += JSON.stringify(Object.values(row)).replaceAll('[', '').replaceAll(']', '').length
+            }).on("end", async function() {
 
-            var fileSize = await axios.get(data['csvUrl'])
+              var fileSize = await axios.get(data['csvUrl'])
                 .then((response) => {
                   return response.data.length / 1000
                 })
-            var condi = true
-            const n_epochs = data['n_epochs'] ? data['n_epochs'] : 2
-            var count = (charLength / 4) * n_epochs
+              var condi = true
+              const n_epochs = data['n_epochs'] ? data['n_epochs'] : 2
+              var count = (charLength / 4) * n_epochs
 
-            switch (data['model']) {
-              case 'davinci':
-                var n = 0.00003
-                break;
-              case 'curie':
-                var n = 0.000003
-                break;
-              case 'babbage':
-                var n = 0.0000006
-                break;
-              case 'ada':
-                var n = 0.0000004
-                break;
-              default:
-                condi = false
-                res.status(500).send({ 'error': "Model is incorrect" })
-                break;
-            }
-  
-            if (condi == true) {
-              count = count * n
-              count = count.toFixed(2)
-              if (count < 0.01) {
-                res.status(200).send({ "estimate": `<$0.01`, "num_records": arr.length, "num_chars": charLength, "file_size": fileSize })
-              } else {
-                res.status(200).send({ "estimate": `~$${count}`, "num_records": arr.length, "num_chars": charLength, "file_size": fileSize })
+              switch (data['model']) {
+                case 'davinci':
+                  var n = 0.00003
+                  break;
+                case 'curie':
+                  var n = 0.000003
+                  break;
+                case 'babbage':
+                  var n = 0.0000006
+                  break;
+                case 'ada':
+                  var n = 0.0000004
+                  break;
+                default:
+                  condi = false
+                  res.status(500).send({ 'error': "Model is incorrect" })
+                  break;
               }
-            }
 
-          })
+              if (condi == true) {
+                count = count * n
+                count = count.toFixed(2)
+                if (count < 0.01) {
+                  res.status(200).send({ "estimate": `<$0.01`, "num_records": arr.length, "num_chars": charLength, "file_size": fileSize })
+                } else {
+                  res.status(200).send({ "estimate": `~$${count}`, "num_records": arr.length, "num_chars": charLength, "file_size": fileSize })
+                }
+              }
+
+            })
         })
     }
 
@@ -117,7 +117,7 @@ app.post('/create-open-ai-model', async (req, res) => {
                   const arr2 = arr.map((item) => (
                     {
                       prompt: item[colOne] + "\n\n###\n\n",
-                      completion: item[colTwo] + " END"
+                      completion: ' ' + item[colTwo] + " END"
                     }
                   ))
 
@@ -189,7 +189,7 @@ app.post('/create-open-ai-model', async (req, res) => {
                   const arr2 = arr.map((item) => (
                     {
                       prompt: item[colOne] + "\n\n###\n\n",
-                      completion: item[colTwo] + " END"
+                      completion: ' ' + item[colTwo] + " END"
                     }
                   ))
 
