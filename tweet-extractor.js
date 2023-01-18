@@ -58,7 +58,9 @@ router.post("/", async (req, response, next) => {
             ))
 
             Promise.all([dataCsv]).then((values) => {
-              alldataCsv = alldataCsv.concat(values[0].filter(Boolean))
+              alldataCsv = alldataCsv.concat(values[0].filter(Boolean).filter((item) => {
+                return item.Completion.length >= 20
+              }))
             });
 
           }
@@ -105,7 +107,7 @@ router.post("/", async (req, response, next) => {
           })
           .catch(function(error) {
             fs.unlink(filename, (err) => {
-              response.status(406).send({ error: error.cause, message: "Failed to upload Tweets file " })
+              response.status(406).send({ error: error.cause, message: "Failed to upload Tweets file" })
             })
           });
 
